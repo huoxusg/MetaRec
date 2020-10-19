@@ -6,10 +6,10 @@ import logging
 import numpy as np
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
-from utils import unserialize, serialize, divide_dataset, task_preprocess, divide_support
+from utils.utils import unserialize, serialize, divide_dataset, task_preprocess, divide_support
 from modules.evaluate import topNRecall, multi_mean_measure
 import modules.loss_func as loss #import BPRLoss, MyHingeLoss, MyBCEWithLogitsLoss
-from utils import NeighborDict, UserItemEmbeds, filter_statedict
+from utils.utils import NeighborDict, UserItemEmbeds, filter_statedict
 from modules.scenario_dataloader import train_generator, evaluate_generator
 from modules.recommender import EmbedRecommender, InteractionRecommender, HybridRecommender
 from meta_learners.s2_meta import LSTMLearner
@@ -123,6 +123,7 @@ class s2Meta:
             query_users = self.user_neighbor_dict(torch.tensor(positive_users + negative_users, device=self.device))
             query_items = self.item_neighbor_dict(torch.tensor(positive_items + negative_items, device=self.device))
             if self.gradient_model is not None:
+                # init for specific task
                 self.gradient_model.init()
                 for stop_gate in self.gradient_model.step_forward(support_pairs, candidates, step_forward=True):
                     stop_gates.append(stop_gate)
@@ -131,6 +132,7 @@ class s2Meta:
                     positive_values, negative_values = values[:positive_num], values[positive_num:]
                     step_loss = self.criterion(positive_values, negative_values)
                     step_losses.append(step_loss)
+            # train-test
             values = self.model(query_users, query_items, with_attr=False)
             positive_values, negative_values = values[:positive_num], values[positive_num:]
             final_loss = self.criterion(positive_values, negative_values)
